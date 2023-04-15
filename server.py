@@ -54,12 +54,15 @@ class PreviewHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             if os.path.islink(fullname):
                 displayname = name + "@"
                 # Note: a link to a directory displays with @ and links with /
-            extensions = [".jpg", ".png", ".gif", ".jpeg"]
-            if any(name.endswith(ex) for ex in extensions):
+            image_extesions = [".jpg", ".png", ".gif", ".jpeg"]
+            ignore_extensions = [".swp", ".swo", "__pycache__", ".ipynb_checkpoints", ".git"]
+            if any(name.endswith(ex) for ex in image_extesions):
                 r.append('<li>%s<br><img src="%s"></li>'  
                     %(
                        html.escape(displayname, quote=False),  urllib.parse.quote(linkname,
                                           errors='surrogatepass')))
+            elif any(name.endswith(ex) for ex in ignore_extensions):
+                pass
             else:
                 r.append('<li><a href="%s">%s</a></li>'
                         % (urllib.parse.quote(linkname,
@@ -75,9 +78,6 @@ class PreviewHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         return f
-
-
-
 if __name__ == '__main__':
     import argparse
 
