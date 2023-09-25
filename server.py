@@ -41,6 +41,7 @@ class PreviewHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         r.append('<html>\n<head>')
         r.append('<meta http-equiv="Content-Type" '
                  'content="text/html; charset=%s">' % enc)
+        r.append('<script src=/live.js></script>\n')
         r.append('<title>%s</title>\n</head>' % title)
         r.append('<body>\n<h1>%s</h1>' % title)
         r.append('<hr>\n<ul>')
@@ -55,7 +56,7 @@ class PreviewHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 displayname = name + "@"
                 # Note: a link to a directory displays with @ and links with /
             image_extesions = [".jpg", ".png", ".gif", ".jpeg"]
-            ignore_extensions = [".swp", ".swo", "__pycache__", ".ipynb_checkpoints", ".git"]
+            ignore_extensions = [".swp", ".swo", "__pycache__", ".ipynb_checkpoints", ".git", ".ipynb"]
             if any(name.endswith(ex) for ex in image_extesions):
                 r.append('<li>%s<br><img src="%s"></li>'  
                     %(
