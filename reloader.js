@@ -1,4 +1,4 @@
-var interval = 1000;
+var interval = 100;
 var lastModified = -1;
 
 function heartbeat() {
