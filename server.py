@@ -11,46 +11,39 @@ from functools import partial
 import watchdog.events
 import watchdog.observers
 
-class LambdaEventHandler(watchdog.events.FileSystemEventHandler):
-    def __init__(self, fn):
-        self.fn = fn
-    def on_any_event(self, event):
-        self.fn()
-
 modified_counter = 1
+goto_path = None
+class LambdaEventHandler(watchdog.events.FileSystemEventHandler):
+    def on_any_event(self, event):
+        if "package_versions.txt" in event.src_path and type(event) == watchdog.events.FileCreatedEvent:
+            global goto_path
+            goto_path = event.src_path.split("package_versions.txt")[0][1:]
+        global modified_counter
+        modified_counter += 1
 
-def inc():
-    global modified_counter
-    modified_counter += 1
-
-    
-handler = LambdaEventHandler(inc)
+handler = LambdaEventHandler()
 observer = watchdog.observers.Observer()
 observer.schedule(handler, ".", recursive=True)
 observer.start()
 
-
 class PreviewHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
-
-    
-
-
-
     def do_POST(self):
         if self.path != "/lastModified":
             self.send_error(HTTPStatus.NOT_FOUND, "File not found")
             return None
-        response = "{\"modified_counter\":" + str(modified_counter) + "}"
+        goto_adendum = ",\"goto_path\":\"" + str(goto_path) + "\"" if goto_path else ""
+        response = "{\"modified_counter\":" + str(modified_counter) + goto_adendum + "}"
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-type", "application/json")
         self.send_header("Content-length", str(len(response)))
         self.end_headers()
         
         self.wfile.write(response.encode())
-
-
-
     def translate_path(self, path):
+        global goto_path
+        if path == goto_path:
+            goto_path = None
+
         if path == "/reloader.js":
             path = __file__.split("/server.py")[0] + "/reloader.js"
         else: 
