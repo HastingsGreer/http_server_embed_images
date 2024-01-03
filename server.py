@@ -8,9 +8,54 @@ import io
 from http import HTTPStatus
 
 from functools import partial
+import watchdog.events
+import watchdog.observers
+
+class LambdaEventHandler(watchdog.events.FileSystemEventHandler):
+    def __init__(self, fn):
+        self.fn = fn
+    def on_any_event(self, event):
+        self.fn()
+
+modified_counter = 1
+
+def inc():
+    global modified_counter
+    modified_counter += 1
+
+    
+handler = LambdaEventHandler(inc)
+observer = watchdog.observers.Observer()
+observer.schedule(handler, ".", recursive=True)
+observer.start()
+
 
 class PreviewHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+
+    
+
+
+
+    def do_POST(self):
+        if self.path != "/lastModified":
+            self.send_error(HTTPStatus.NOT_FOUND, "File not found")
+            return None
+        response = "{\"modified_counter\":" + str(modified_counter) + "}"
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-type", "application/json")
+        self.send_header("Content-length", str(len(response)))
+        self.end_headers()
         
+        self.wfile.write(response.encode())
+
+
+
+    def translate_path(self, path):
+        if path == "/reloader.js":
+            path = __file__.split("/server.py")[0] + "/reloader.js"
+        else: 
+            path = super().translate_path(path)
+        return path
     def list_directory(self, path):
         """Helper to produce a directory listing (absent index.html).
 
@@ -41,7 +86,7 @@ class PreviewHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         r.append('<html>\n<head>')
         r.append('<meta http-equiv="Content-Type" '
                  'content="text/html; charset=%s">' % enc)
-        r.append('<script src=/live.js></script>\n')
+        r.append('<script src=/reloader.js></script>\n')
         r.append('<title>%s</title>\n</head>' % title)
         r.append('<body>\n<h1>%s</h1>' % title)
         r.append('<hr>\n<ul>')
@@ -61,7 +106,7 @@ class PreviewHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 r.append('<li>%s<br><img src="%s"></li>'  
                     %(
                        html.escape(displayname, quote=False),  urllib.parse.quote(linkname,
-                                          errors='surrogatepass')))
+                                          errors='surrogatepass') + "?mtime=" + str(modified_counter)))
             elif any(name.endswith(ex) for ex in ignore_extensions):
                 pass
             else:
